@@ -4,52 +4,74 @@ use iced::{
     Element,
     Column,
     Text,
-    Radio,
     button,
-    button::Button
+    button::Button,
+    text_input,
+    text_input::TextInput,
+    Background,
+    Color
 };
-use std::fmt;
+use std::{
+    fmt,
+    path::{
+        Path,
+        PathBuf
+    }
+};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum OperationType {
-    Load,
-    Position
+#[derive(Debug, Clone)]
+pub enum Message {
+    PathChanged(String),
+    Run
 }
 
-impl fmt::Display for OperationType {
+enum State {
+    Setup,
+    Running
+}
+
+enum PathOptions {
+    Ok(PathBuf),
+    NoDir,
+    NotFound
+}
+
+impl Default for PathOptions {
+    fn default() -> PathOptions {
+        PathOptions::NotFound
+    }
+}
+
+impl fmt::Display for PathOptions {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", match self {
-            OperationType::Load => "Load images",
-            OperationType::Position => "Find relative positions of the layers"
+            PathOptions::Ok(_) => "Directory found",
+            PathOptions::NoDir => "Path is not a directory",
+            PathOptions::NotFound => "Invalid path"
         })
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum Message {
-    OperationSelected(OperationType),
-    ApplyOperation(OperationType),
-    ReverseOperation
+impl Default for State {
+    fn default() -> State {
+        State::Setup
+    }
 }
 
-enum State {
-    SelectOperation(Option<OperationType>),
-    OperationOptions(OperationType)
-}
-
+#[derive(Default)]
 pub struct App {
     state: State,
-    button_next: button::State
+    button_run: button::State,
+    text_input_path: text_input::State,
+    path_string: String,
+    path: PathOptions
 }
 
 impl Application for App {
     type Message = Message;
 
     fn new() -> (App, Command<Message>) {
-        let app = App {
-            state: State::SelectOperation(None),
-            button_next: button::State::new()
-        };
+        let app = App::default();
 
         (app, Command::none())
     }
@@ -60,14 +82,20 @@ impl Application for App {
 
     fn update(&mut self, message: Message) -> Command<Message> {
         match message {
-            Message::OperationSelected(operation) => {
-                self.state = State::SelectOperation(Some(operation))
+            Message::PathChanged(path) => {
+                self.path = if let Ok(path) = Path::new(&path).canonicalize() {
+                    if path.as_path().is_dir() {
+                        PathOptions::Ok(path)
+                    } else {
+                        PathOptions::NoDir
+                    }
+                } else {
+                    PathOptions::NotFound
+                };
+                self.path_string = path;
             },
-            Message::ApplyOperation(operation) => {
-                self.state = State::OperationOptions(operation)
-            },
-            Message::ReverseOperation => {
-
+            Message::Run => {
+                self.state = State::Running;
             }
         }
         
@@ -76,31 +104,46 @@ impl Application for App {
 
     fn view(&mut self) -> Element<Message> {
         match self.state {
-            State::SelectOperation(operation) => {
+            State::Setup => {
                 Column::new()
+                    .spacing(32)
                     .push(
-                        Text::new("What operation would you like to perform next?").size(48)
+                        Column::new()
+                            .spacing(8)
+                            .push(
+                                Text::new("Select the directory containing the images").size(24)
+                            )
+                            .push(
+                                TextInput::new(
+                                    &mut self.text_input_path,
+                                    "Type the directory path here",
+                                    &self.path_string,
+                                    Message::PathChanged
+                                )
+                            )
+                            .push(
+                                Text::new(format!("{}", self.path)).size(16)
+                            )
                     )
                     .push(
-                        Radio::new(OperationType::Load, "Load images from directory", operation, Message::OperationSelected)
-                    )
-                    .push(
-                        Radio::new(OperationType::Position, "Find position of layers relative to each other", operation, Message::OperationSelected)
-                    )
-                    .push(
-                        if let Some(operation) = operation {
-                            Button::new(&mut self.button_next, Text::new("Apply operation"))
-                                .on_press(Message::ApplyOperation(operation))
+                        if let PathOptions::Ok(_) = self.path {
+                            Button::new(&mut self.button_run, Text::new("Run"))
+                                .on_press(Message::Run)
+                                .padding(16)
+                                .background(Background::Color(Color::from([0.0, 1.0, 0.0])))
                         } else {
-                            Button::new(&mut self.button_next, Text::new("Apply operation"))
+                            Button::new(&mut self.button_run, Text::new("Run"))
+                                .padding(16)
+                                .background(Background::Color(Color::from([1.0, 0.0, 0.0])))
                         }
                     )
                     .into()
-            }
-            State::OperationOptions(operation) => {
+            },
+
+            State::Running => {
                 Column::new()
                     .push(
-                        Text::new(format!("Set options for {}", operation)).size(48)
+                        Text::new(format!("Running ...")).size(24)
                     )
                     .into()
             }
