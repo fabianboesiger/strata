@@ -1,38 +1,29 @@
 mod load;
 mod position;
+mod join;
+mod save;
 
 pub use load::Load;
 pub use position::Position;
-use image::{
-    RgbImage,
-    Rgb
-};
+pub use join::Join;
+pub use save::Save;
+use image::RgbImage;
 use std::cmp::{
     min, 
     max
 };
 use rayon::prelude::*;
+use nalgebra::Vector2;
 
-type Vector = (i32, i32);
+pub type Vector = Vector2<i32>;
 
+// Calculates the difference between two images.
 fn image_difference(i1: &RgbImage, i2: &RgbImage, i2_rel_to_i1: Vector, density: u32) -> f32 {
-    let p1 = (max(0, i2_rel_to_i1.0), max(0, i2_rel_to_i1.1));
-    let p2 = (max(0, -i2_rel_to_i1.0), max(0, -i2_rel_to_i1.1));
-    /*
-    let l = max(p1.0, p2.0);
-    let r = min(
-        p1.0 + i1.width() as i32, 
-        p1.0 + i1.width() as i32
-    );
-    let t = max(p1.1, p2.1);
-    let b = min(
-        p1.1 + i2.height() as i32, 
-        p1.1 + i2.height() as i32
-    );
-    */
+    let p1 = (max(0, i2_rel_to_i1.x), max(0, i2_rel_to_i1.y));
+    let p2 = (max(0, -i2_rel_to_i1.x), max(0, -i2_rel_to_i1.y));
     let size = (
-        min(i1.width() as i32 - i2_rel_to_i1.0, i2.width() as i32 + i2_rel_to_i1.0),
-        min(i1.height() as i32 - i2_rel_to_i1.1, i2.height() as i32 + i2_rel_to_i1.1)
+        min(i1.width() as i32 - i2_rel_to_i1.x, i2.width() as i32 + i2_rel_to_i1.x),
+        min(i1.height() as i32 - i2_rel_to_i1.y, i2.height() as i32 + i2_rel_to_i1.y)
     );
     let result = (0..size.0)
         .into_par_iter()
@@ -47,17 +38,18 @@ fn image_difference(i1: &RgbImage, i2: &RgbImage, i2_rel_to_i1: Vector, density:
         .map(|(x, y)| {
             let a = i1.get_pixel((x + p1.0) as u32, (y + p1.1) as u32);
             let b = i2.get_pixel((x + p2.0) as u32, (y + p2.1) as u32);
-            let error = ((
-                (a[0] as i32 - b[0] as i32).pow(2) + 
-                (a[1] as i32 - b[1] as i32).pow(2) + 
-                (a[2] as i32 - b[2] as i32).pow(2)
-            ) as f32).sqrt();
-            println!("{} {} {}", x, y, error);
+            let error = (
+                ((a[0] as f32 - b[0] as f32) / 256.0).powi(2) + 
+                ((a[1] as f32 - b[1] as f32) / 256.0).powi(2) + 
+                ((a[2] as f32 - b[2] as f32) / 256.0).powi(2)
+            ).sqrt();
             (error, 1)
         })
         .reduce(|| (0.0, 1), |acc, e| ((acc.0 + e.0), (acc.1 + e.1)));
 
-    result.0 / result.1 as f32
+    let result = result.0 / result.1 as f32;
+
+    result
 }
 
 #[derive(Clone)]
@@ -70,51 +62,8 @@ impl Layer {
     fn new(image: RgbImage) -> Layer {
         Layer {
             image,
-            position: (0, 0)
+            position: Vector::zeros()
         }
-    }
-
-    fn get_pixel(&self, x: i32, y: i32) -> Option<&Rgb<u8>> {
-        let rx = x - self.position.0;
-        let ry = y - self.position.1;
-        if rx >= 0 && rx < self.image.width() as i32 && ry >= 0 && ry < self.image.height() as i32 {
-            Some(self.image.get_pixel(rx as u32, ry as u32))
-        } else {
-            None
-        }
-    }
-
-    fn difference(&self, other: &Layer) -> f32 {
-        let l = max(self.position.0, other.position.0);
-        let r = min(
-            self.position.0 + self.image.width() as i32, 
-            other.position.0 + other.image.width() as i32
-        );
-        let t = max(self.position.1, other.position.1);
-        let b = min(
-            self.position.1 + self.image.height() as i32, 
-            other.position.1 + other.image.height() as i32
-        );
-
-        (l..(r - l))
-            .into_par_iter()
-            .map(|x| 
-                (t..(b - t))
-                    .into_par_iter()
-                    .map(move |y| (x, y))
-            )
-            .flatten()
-            .map(|(x, y)| {
-                let a = self.get_pixel(x, y).unwrap();
-                let b = other.get_pixel(x, y).unwrap();
-                let error = ((
-                    (a[0] as i32 - b[0] as i32).pow(2) + 
-                    (a[1] as i32 - b[1] as i32).pow(2) + 
-                    (a[2] as i32 - b[2] as i32).pow(2)
-                ) as f32).sqrt();
-                error
-            })
-            .reduce(|| 0.0, |acc, e| acc + e)
     }
 }
 

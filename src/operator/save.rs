@@ -13,21 +13,23 @@ use image::{
 };
 use rayon::prelude::*;
 
-pub struct Load {
+pub struct Save {
     path: PathBuf
 }
 
-impl Load {
-    pub fn new(path: PathBuf) -> Load {
-        Load {
+impl Save {
+    pub fn new(path: PathBuf) -> Save {
+        Save {
             path
         }
     }
 }
 
-impl Operation for Load {
+impl Operation for Save {
     fn apply(&self, mut view: View) -> View {
-        println!("Loading images from \"{}\"", self.path.display());
+        println!("Saving result to \"{}\"", self.path.display());
+
+        debug_assert_eq!(view.layers.len(), 0);
 
         view.layers = fs::read_dir(&self.path)
             .unwrap()

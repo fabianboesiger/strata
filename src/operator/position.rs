@@ -5,13 +5,14 @@ use super::{
     Vector
 };
 use std::{
+    iter::FromIterator,
     cmp::{
         min,
-        max,
-        Ordering
+        max
     }
 };
 use rayon::prelude::*;
+use partitions::PartitionVec;
 
 pub struct Position {
 }
@@ -27,6 +28,7 @@ impl Operation for Position {
     fn apply(&self, mut view: View) -> View {
         println!("Finding relative positions of images");
 
+        // Matches contains a vector with the positions of the images relative to each other.
         let mut matches = view.layers
             .par_iter()
             .enumerate()
@@ -46,8 +48,19 @@ impl Operation for Position {
                 let mut rx = max(l1.image.width(), l2.image.width())  as i32;
                 let mut py = -(min(l1.image.height(), l2.image.height()) as i32 / 2);
                 let mut ry = max(l1.image.height(), l2.image.height())  as i32;
-                let mut result = ((0, 0), 0.0);
-                for g in (0..=4).map(|x| 2_u32.pow(4 - x)) {
+                let mut result = (Vector::zeros(), 0.0);
+
+                let r =
+                    (min(
+                        min(l1.image.width(), l1.image.height()), 
+                        min(l2.image.width(), l2.image.height())
+                    ) as f32 / 16.0).log2() as u32;
+
+                println!("r = {}", r);
+
+                for g in (0..=r).map(|x| 2_u32.pow(r - x)) {
+                    println!("Now searching area {} {} {} {}", px, py, px + rx, py + ry);
+
                     result = (px..(px + rx))
                         .into_par_iter()
                         .filter(move |i| i % g as i32 == 0)
@@ -55,12 +68,11 @@ impl Operation for Position {
                             (py..(py + ry))
                                 .into_par_iter()
                                 .filter(move |i| i % g as i32 == 0)
-                                .map(move |y| (x, y))
+                                .map(move |y| Vector::new(x, y))
                         )
                         .flatten()
                         // Iterates through all possible image positions.
-                        .map(move |(x, y)| {
-                            let i2_rel_to_i1 = (x, y);
+                        .map(move |i2_rel_to_i1| {
                             (i2_rel_to_i1, image_difference(
                                 &l1.image, 
                                 &l2.image,
@@ -68,32 +80,52 @@ impl Operation for Position {
                                 g
                             ))
                         })
-                        .reduce(|| ((0, 0), 1.0), |acc, x| {
-                            if x.1 < acc.1 {
-                                x
+                        .reduce(|| (Vector::zeros(), 1.0), |a, b| {
+                            if a.1 < b.1 {
+                                a
                             } else {
-                                acc
+                                b
                             }
                         });
 
-                    px = (result.0).0 - g as i32;
+                    println!("Best position with granularity {} was {:?}", g, result);
+
+                    px = (result.0).x - g as i32;
                     rx = g as i32 * 2;
-                    py = (result.0).1 - g as i32;
+                    py = (result.0).y - g as i32;
                     ry = g as i32 * 2;
                 }
                 (n1, n2, result.0, result.1)
             })
             .collect::<Vec<(usize, usize, Vector, f32)>>();
 
+        // We now perform Kruskal's algorithm to join the images.
+        let mut partitions = PartitionVec::from_iter((0..view.layers.len()).map(|_| Vector::zeros()));
+        matches.par_sort_by(|(_, _, _, e1), (_, _, _, e2)|
+            e1.partial_cmp(e2).unwrap()
+        );
+
         println!("{:?}", matches);
 
-        matches
-            .par_sort_by(|(_, _, _, e1), (_, _, _, e2)|
-                e1.partial_cmp(e2).unwrap()
-            );
+        for (i1, i2, i2_rel_to_i1, _) in matches {
+            if !partitions.same_set(i1, i2) {
+                let move_to = (partitions[i1] + i2_rel_to_i1) - partitions[i2];
+                for (_, position) in partitions.set_mut(i1) {
+                    *position += move_to;
+                }
+                partitions.union(i1, i2);
+            }
+            if partitions.amount_of_sets() == 1 {
+                break;
+            }
+        }
 
-        println!("{:?}", matches);
+        println!("{:?}", partitions);
         
+        for (i, position) in partitions.into_iter().enumerate() {
+            view.layers[i].position = position;
+        }
+
         view
     }
 }

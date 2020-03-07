@@ -15,13 +15,17 @@ use app::App;
 use operator::{
     Operator,
     Load,
-    Position
+    Position,
+    Join,
+    Save
 };
 
 fn main() {
     let mut operator = Operator::default();
     operator.add(Load::new(PathBuf::from("images")));
     operator.add(Position::new());
+    operator.add(Join::new());
+    operator.add(Save::new(PathBuf::from("result.jpg")));
     operator.run();
 
     App::run(Settings {
