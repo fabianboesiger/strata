@@ -8,12 +8,16 @@ pub use position::Position;
 pub use join::Join;
 pub use save::Save;
 use image::RgbImage;
-use std::cmp::{
-    min, 
-    max
+use std::{
+    path::PathBuf,
+    cmp::{
+        min, 
+        max
+    }
 };
 use rayon::prelude::*;
 use nalgebra::Vector2;
+use crate::error;
 
 pub type Vector = Vector2<i32>;
 
@@ -68,7 +72,7 @@ impl Layer {
 }
 
 pub trait Operation {
-    fn apply(&self, view: View) -> View;
+    fn apply(&self, view: View) -> error::Result<View>;
 }
 
 #[derive(Clone, Default)]
@@ -87,10 +91,24 @@ impl Operator {
         self.operations.push(Box::new(operation));
     }
 
-    pub fn run(&self) {
+    pub fn run(&self) -> error::Result<()> {
         let mut view = View::default();
+
         for operation in &self.operations {
-            view = operation.apply(view);
+            view = operation.apply(view)?;
         }
+
+        Ok(())
     }
+}
+
+pub async fn run() -> error::Result<()> {
+    let mut operator = Operator::default();
+    operator.add(Load::new(PathBuf::from("images")));
+    operator.add(Position::new());
+    operator.add(Join::new());
+    operator.add(Save::new(PathBuf::from("result.jpg")));
+    operator.run()?;
+
+    Ok(())
 }

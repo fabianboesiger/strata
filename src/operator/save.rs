@@ -1,17 +1,9 @@
 use super::{
     Operation,
-    View,
-    Layer
+    View
 };
-use std::{
-    fs,
-    path::PathBuf
-};
-use image::{
-    DynamicImage,
-    //imageops::FilterType
-};
-use rayon::prelude::*;
+use std::path::PathBuf;
+use crate::error;
 
 pub struct Save {
     path: PathBuf
@@ -26,30 +18,13 @@ impl Save {
 }
 
 impl Operation for Save {
-    fn apply(&self, mut view: View) -> View {
+    fn apply(&self, view: View) -> error::Result<View> {
         println!("Saving result to \"{}\"", self.path.display());
 
-        debug_assert_eq!(view.layers.len(), 0);
+        debug_assert_eq!(view.layers.len(), 1);
 
-        view.layers = fs::read_dir(&self.path)
-            .unwrap()
-            .into_iter()
-            .map(|path| path.unwrap().path())
-            .collect::<Vec<PathBuf>>()
-            .par_iter()
-            .map(|path| {
-                image::open(path).unwrap()/*.resize(1024, 1024, FilterType::Gaussian)*/
-            })
-            .map(|image|
-                if let DynamicImage::ImageRgb8(image) = image {
-                    println!("Loaded image");
-                    Layer::new(image)
-                } else {
-                    panic!()
-                }
-            )
-            .collect::<Vec<Layer>>();
+        view.layers[0].image.save(&self.path)?;
 
-        view
+        Ok(view)
     }
 }

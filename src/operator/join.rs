@@ -13,6 +13,7 @@ use std::{
 };
 use rayon::prelude::*;
 use partitions::PartitionVec;
+use crate::error;
 
 pub struct Join {
 }
@@ -25,9 +26,9 @@ impl Join {
 }
 
 impl Operation for Join {
-    fn apply(&self, mut view: View) -> View {
+    fn apply(&self, mut view: View) -> error::Result<View> {
         println!("Joining images");
 
-        view
+        Ok(view)
     }
 }

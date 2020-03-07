@@ -12,6 +12,7 @@ use image::{
     //imageops::FilterType
 };
 use rayon::prelude::*;
+use crate::error;
 
 pub struct Load {
     path: PathBuf
@@ -26,7 +27,7 @@ impl Load {
 }
 
 impl Operation for Load {
-    fn apply(&self, mut view: View) -> View {
+    fn apply(&self, mut view: View) -> error::Result<View> {
         println!("Loading images from \"{}\"", self.path.display());
 
         view.layers = fs::read_dir(&self.path)
@@ -48,6 +49,6 @@ impl Operation for Load {
             )
             .collect::<Vec<Layer>>();
 
-        view
+        Ok(view)
     }
 }

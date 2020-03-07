@@ -13,6 +13,7 @@ use std::{
 };
 use rayon::prelude::*;
 use partitions::PartitionVec;
+use crate::error;
 
 pub struct Position {
 }
@@ -25,7 +26,7 @@ impl Position {
 }
 
 impl Operation for Position {
-    fn apply(&self, mut view: View) -> View {
+    fn apply(&self, mut view: View) -> error::Result<View> {
         println!("Finding relative positions of images");
 
         // Matches contains a vector with the positions of the images relative to each other.
@@ -126,6 +127,6 @@ impl Operation for Position {
             view.layers[i].position = position;
         }
 
-        view
+        Ok(view)
     }
 }
