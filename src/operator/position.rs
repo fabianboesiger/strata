@@ -1,7 +1,8 @@
 use super::{
     Operation,
     View,
-    image_difference
+    image_difference,
+    Vector
 };
 use std::{
     cmp::{
@@ -24,7 +25,9 @@ impl Position {
 
 impl Operation for Position {
     fn apply(&self, mut view: View) -> View {
-        let matches = view.layers
+        println!("Finding relative positions of images");
+
+        let mut matches = view.layers
             .par_iter()
             .enumerate()
             .map(|(n1, l1)|
@@ -44,7 +47,7 @@ impl Operation for Position {
                 let mut py = -(min(l1.image.height(), l2.image.height()) as i32 / 2);
                 let mut ry = max(l1.image.height(), l2.image.height())  as i32;
                 let mut result = ((0, 0), 0.0);
-                for g in (6..=0_u32).map(|x| 2_u32.pow(x)) {
+                for g in (0..=4).map(|x| 2_u32.pow(4 - x)) {
                     result = (px..(px + rx))
                         .into_par_iter()
                         .filter(move |i| i % g as i32 == 0)
@@ -58,7 +61,7 @@ impl Operation for Position {
                         // Iterates through all possible image positions.
                         .map(move |(x, y)| {
                             let i2_rel_to_i1 = (x, y);
-                            ((i2_rel_to_i1), image_difference(
+                            (i2_rel_to_i1, image_difference(
                                 &l1.image, 
                                 &l2.image,
                                 i2_rel_to_i1,
@@ -78,24 +81,18 @@ impl Operation for Position {
                     py = (result.0).1 - g as i32;
                     ry = g as i32 * 2;
                 }
-                (n1, n2, result.0)
+                (n1, n2, result.0, result.1)
             })
-            .collect::<Vec<(usize, usize, (i32, i32))>>();
+            .collect::<Vec<(usize, usize, Vector, f32)>>();
 
         println!("{:?}", matches);
 
-        for (i, layer) in view.layers.iter_mut().enumerate().skip(1) {
+        matches
+            .par_sort_by(|(_, _, _, e1), (_, _, _, e2)|
+                e1.partial_cmp(e2).unwrap()
+            );
 
-            let position = (0.0, 0.0);
-
-            matches
-                .par_iter()
-                .filter(|(_, n, _)| *n == i)
-                .map(|| (0, (0.0, 0.0)))
-
-            layer.position = (0, 0);
-                
-        }
+        println!("{:?}", matches);
         
         view
     }

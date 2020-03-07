@@ -17,7 +17,8 @@ type Vector = (i32, i32);
 
 fn image_difference(i1: &RgbImage, i2: &RgbImage, i2_rel_to_i1: Vector, density: u32) -> f32 {
     let p1 = (max(0, i2_rel_to_i1.0), max(0, i2_rel_to_i1.1));
-    let p2 = (min(0, -i2_rel_to_i1.0), min(0, -i2_rel_to_i1.1));
+    let p2 = (max(0, -i2_rel_to_i1.0), max(0, -i2_rel_to_i1.1));
+    /*
     let l = max(p1.0, p2.0);
     let r = min(
         p1.0 + i1.width() as i32, 
@@ -28,8 +29,12 @@ fn image_difference(i1: &RgbImage, i2: &RgbImage, i2_rel_to_i1: Vector, density:
         p1.1 + i2.height() as i32, 
         p1.1 + i2.height() as i32
     );
-    let size = (r - l, b - t);
-    (0..size.0)
+    */
+    let size = (
+        min(i1.width() as i32 - i2_rel_to_i1.0, i2.width() as i32 + i2_rel_to_i1.0),
+        min(i1.height() as i32 - i2_rel_to_i1.1, i2.height() as i32 + i2_rel_to_i1.1)
+    );
+    let result = (0..size.0)
         .into_par_iter()
         .filter(|i| i % density as i32 == 0)
         .map(|x| 
@@ -47,9 +52,12 @@ fn image_difference(i1: &RgbImage, i2: &RgbImage, i2_rel_to_i1: Vector, density:
                 (a[1] as i32 - b[1] as i32).pow(2) + 
                 (a[2] as i32 - b[2] as i32).pow(2)
             ) as f32).sqrt();
-            error
+            println!("{} {} {}", x, y, error);
+            (error, 1)
         })
-        .reduce(|| 0.0, |acc, e| acc + e)
+        .reduce(|| (0.0, 1), |acc, e| ((acc.0 + e.0), (acc.1 + e.1)));
+
+    result.0 / result.1 as f32
 }
 
 #[derive(Clone)]
