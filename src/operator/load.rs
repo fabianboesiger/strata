@@ -9,7 +9,7 @@ use std::{
 };
 use image::{
     DynamicImage,
-    //imageops::FilterType
+    imageops::FilterType
 };
 use rayon::prelude::*;
 use crate::error;
@@ -28,7 +28,7 @@ impl Load {
 
 impl Operation for Load {
     fn apply(&self, mut view: View) -> error::Result<View> {
-        println!("Loading images from \"{}\"", self.path.display());
+        println!("Loading images from \"{}\" ...", self.path.display());
 
         view.layers = fs::read_dir(&self.path)
             .unwrap()
@@ -37,11 +37,12 @@ impl Operation for Load {
             .collect::<Vec<PathBuf>>()
             .par_iter()
             .map(|path| {
-                image::open(path).unwrap()/*.resize(1024, 1024, FilterType::Gaussian)*/
+                let result = image::open(path).unwrap()/*.resize(1024, 1024, FilterType::Gaussian)*/;
+                println!("Finished loading image \"{}\"", path.display());
+                result
             })
             .map(|image|
                 if let DynamicImage::ImageRgb8(image) = image {
-                    println!("Loaded image");
                     Layer::new(image)
                 } else {
                     panic!()

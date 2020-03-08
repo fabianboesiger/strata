@@ -7,7 +7,10 @@ pub use load::Load;
 pub use position::Position;
 pub use join::Join;
 pub use save::Save;
-use image::RgbImage;
+use image::{
+    RgbImage,
+    Rgb
+};
 use std::{
     path::PathBuf,
     cmp::{
@@ -22,7 +25,7 @@ use crate::error;
 pub type Vector = Vector2<i32>;
 
 // Calculates the difference between two images.
-fn image_difference(i1: &RgbImage, i2: &RgbImage, i2_rel_to_i1: Vector, density: u32) -> f32 {
+fn image_difference(i1: &RgbImage, i2: &RgbImage, i2_rel_to_i1: &Vector, density: u32) -> f32 {
     let p1 = (max(0, i2_rel_to_i1.x), max(0, i2_rel_to_i1.y));
     let p2 = (max(0, -i2_rel_to_i1.x), max(0, -i2_rel_to_i1.y));
     let size = (
@@ -69,6 +72,21 @@ impl Layer {
             position: Vector::zeros()
         }
     }
+
+    fn get_pixel(&self, position: &Vector) -> Option<&Rgb<u8>> {
+        let absolute_position = position - self.position;
+
+        if absolute_position.x >= 0
+            && absolute_position.y >= 0
+            && absolute_position.x < self.image.width() as i32
+            && absolute_position.y < self.image.height() as i32
+        {
+            Some(self.image.get_pixel(absolute_position.x as u32, absolute_position.y as u32))
+            //Some(Rgb::from([self.position.x as u8 * 32, self.position.y as u8 * 32, self.position.x as u8 * self.position.y as u8]))
+        } else {
+            None
+        }
+    }
 }
 
 pub trait Operation {
@@ -102,12 +120,12 @@ impl Operator {
     }
 }
 
-pub async fn run() -> error::Result<()> {
+pub async fn run(input: PathBuf, output: PathBuf) -> error::Result<()> {
     let mut operator = Operator::default();
-    operator.add(Load::new(PathBuf::from("images")));
+    operator.add(Load::new(input));
     operator.add(Position::new());
     operator.add(Join::new());
-    operator.add(Save::new(PathBuf::from("result.jpg")));
+    operator.add(Save::new(output));
     operator.run()?;
 
     Ok(())

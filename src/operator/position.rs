@@ -27,7 +27,7 @@ impl Position {
 
 impl Operation for Position {
     fn apply(&self, mut view: View) -> error::Result<View> {
-        println!("Finding relative positions of images");
+        println!("Finding relative positions of images ...");
 
         // Matches contains a vector with the positions of the images relative to each other.
         let mut matches = view.layers
@@ -55,12 +55,9 @@ impl Operation for Position {
                     (min(
                         min(l1.image.width(), l1.image.height()), 
                         min(l2.image.width(), l2.image.height())
-                    ) as f32 / 16.0).log2() as u32;
-
-                println!("r = {}", r);
+                    ) as f32 / 32.0).log2() as u32;
 
                 for g in (0..=r).map(|x| 2_u32.pow(r - x)) {
-                    println!("Now searching area {} {} {} {}", px, py, px + rx, py + ry);
 
                     result = (px..(px + rx))
                         .into_par_iter()
@@ -77,7 +74,7 @@ impl Operation for Position {
                             (i2_rel_to_i1, image_difference(
                                 &l1.image, 
                                 &l2.image,
-                                i2_rel_to_i1,
+                                &i2_rel_to_i1,
                                 g
                             ))
                         })
@@ -89,11 +86,11 @@ impl Operation for Position {
                             }
                         });
 
-                    println!("Best position with granularity {} was {:?}", g, result);
+                    println!("Searched area {} {} {} {}, best position was {} {}.", px, py, px + rx, py + ry, result.0.x, result.0.y);
 
-                    px = (result.0).x - g as i32;
+                    px = result.0.x - g as i32;
                     rx = g as i32 * 2;
-                    py = (result.0).y - g as i32;
+                    py = result.0.y - g as i32;
                     ry = g as i32 * 2;
                 }
                 (n1, n2, result.0, result.1)
@@ -106,12 +103,12 @@ impl Operation for Position {
             e1.partial_cmp(e2).unwrap()
         );
 
-        println!("{:?}", matches);
+        println!("Matches are: {:?}", matches);
 
         for (i1, i2, i2_rel_to_i1, _) in matches {
             if !partitions.same_set(i1, i2) {
                 let move_to = (partitions[i1] + i2_rel_to_i1) - partitions[i2];
-                for (_, position) in partitions.set_mut(i1) {
+                for (_, position) in partitions.set_mut(i2) {
                     *position += move_to;
                 }
                 partitions.union(i1, i2);
@@ -121,7 +118,7 @@ impl Operation for Position {
             }
         }
 
-        println!("{:?}", partitions);
+        println!("Partitions are: {:?}", partitions);
         
         for (i, position) in partitions.into_iter().enumerate() {
             view.layers[i].position = position;
