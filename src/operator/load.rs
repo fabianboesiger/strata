@@ -15,13 +15,15 @@ use rayon::prelude::*;
 use crate::error;
 
 pub struct Load {
-    path: PathBuf
+    path: PathBuf,
+    preview: bool
 }
 
 impl Load {
     pub fn new(path: PathBuf) -> Load {
         Load {
-            path
+            path,
+            preview: false
         }
     }
 }
@@ -37,7 +39,10 @@ impl Operation for Load {
             .collect::<Vec<PathBuf>>()
             .par_iter()
             .map(|path| {
-                let result = image::open(path).unwrap()/*.resize(1024, 1024, FilterType::Gaussian)*/;
+                let mut result = image::open(path).unwrap();
+                if self.preview {
+                    result = result.resize(256, 256, FilterType::Gaussian);
+                }
                 println!("Finished loading image \"{}\"", path.display());
                 result
             })
