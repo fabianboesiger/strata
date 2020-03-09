@@ -65,7 +65,7 @@ impl Operation for Join {
                             .map(|pixel| {
                                 let center = layer.position + Vector::new(layer.image.width() as i32, layer.image.height() as i32) / 2;
                                 let distance = position - center;
-                                ((pixel[0] as f32, pixel[1] as f32, pixel[2] as f32), 1.0 / ((distance.x.pow(2) + distance.y.pow(2)) as f32))
+                                ((pixel[0] as f32, pixel[1] as f32, pixel[2] as f32), 10000.0 - ((distance.x.pow(2) + distance.y.pow(2)) as f32))
                                 //[pixel[0] as u32, pixel[1] as u32, pixel[2] as u32]
                             })
                     })
@@ -85,25 +85,15 @@ impl Operation for Join {
                     .sum::<f32>();
                 
                 let result = pixels
-                    .into_par_iter()
-                    .fold(|| ((0.0, 0.0, 0.0), 0.0), |(c1, d1), (c2, d2)| {
-                        ((c1.0 + c2.0 * d2 / sum, c1.1 + c2.1 * d2 / sum, c1.2 + c2.2 * d2 / sum), d1 + d2)
-                    })
-                    .collect::<Vec<((f32, f32, f32), f32)>>()
                     .into_iter()
-                    .fold(((0.0, 0.0, 0.0), 0.0), |(c1, d1), (c2, d2)| {
-                        ((c1.0 + c2.0 * d2 / sum, c1.1 + c2.1 * d2 / sum, c1.2 + c2.2 * d2 / sum), d1 + d2)
+                    .fold((0.0, 0.0, 0.0), |acc, (c, d)| {
+                        (acc.0 + c.0 * d, acc.1 + c.1 * d, acc.2 + c.2 * d)
                     });
-
-                let c = result.0;
-                let d = result.1;
-
-                debug_assert_eq!(sum, d);
 
                 (
                     (position.x - dimensions.0) as u32,
                     (position.y - dimensions.1) as u32, 
-                    ((c.0) as u8, (c.1) as u8, (c.2) as u8)
+                    ((result.0 / sum) as u8, (result.1 / sum) as u8, (result.2 / sum) as u8)
                 )
             })
             .collect::<Vec<(u32, u32, (u8, u8, u8))>>();
