@@ -188,7 +188,7 @@ impl Application for App {
 
     fn view(&mut self) -> Element<Message> {
         Scrollable::new(&mut self.scroll)
-            .padding(48)
+            .padding(32)
             .push(match &self.state {
                 State::Setup => {
                     Column::new()

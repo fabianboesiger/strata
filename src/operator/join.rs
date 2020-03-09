@@ -58,28 +58,52 @@ impl Operation for Join {
             )
             .flatten()
             .map(|position| {
-                let result = view.layers
+                let pixels = view.layers
                     .par_iter()
                     .map(|layer| {
                         layer.get_pixel(&position)
                             .map(|pixel| {
                                 let center = layer.position + Vector::new(layer.image.width() as i32, layer.image.height() as i32) / 2;
                                 let distance = position - center;
-                                /*(distance.x.pow(2) + distance.y.pow(2)) as u32*/
-                                [pixel[0] as u32, pixel[1] as u32, pixel[2] as u32]
+                                ((pixel[0] as f32, pixel[1] as f32, pixel[2] as f32), 1.0 / ((distance.x.pow(2) + distance.y.pow(2)) as f32))
+                                //[pixel[0] as u32, pixel[1] as u32, pixel[2] as u32]
                             })
                     })
                     .filter_map(|x| x)
+                    .collect::<Vec<((f32, f32, f32), f32)>>();
+                    /*
                     .reduce(|| ([0, 0, 0]), |p1, p2| {
                         [max(p1[0], p2[0]), max(p1[1], p2[1]), max(p1[2], p2[2])]
                     });
+                    */
 
                 //println!("{:?}", result);
+                
+                let sum = pixels
+                    .par_iter()
+                    .map(|(_, d)| d)
+                    .sum::<f32>();
+                
+                let result = pixels
+                    .into_par_iter()
+                    .fold(|| ((0.0, 0.0, 0.0), 0.0), |(c1, d1), (c2, d2)| {
+                        ((c1.0 + c2.0 * d2 / sum, c1.1 + c2.1 * d2 / sum, c1.2 + c2.2 * d2 / sum), d1 + d2)
+                    })
+                    .collect::<Vec<((f32, f32, f32), f32)>>()
+                    .into_iter()
+                    .fold(((0.0, 0.0, 0.0), 0.0), |(c1, d1), (c2, d2)| {
+                        ((c1.0 + c2.0 * d2 / sum, c1.1 + c2.1 * d2 / sum, c1.2 + c2.2 * d2 / sum), d1 + d2)
+                    });
+
+                let c = result.0;
+                let d = result.1;
+
+                debug_assert_eq!(sum, d);
 
                 (
                     (position.x - dimensions.0) as u32,
                     (position.y - dimensions.1) as u32, 
-                    (result[0] as u8, result[1] as u8, result[2] as u8)
+                    ((c.0) as u8, (c.1) as u8, (c.2) as u8)
                 )
             })
             .collect::<Vec<(u32, u32, (u8, u8, u8))>>();

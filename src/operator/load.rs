@@ -23,7 +23,7 @@ impl Load {
     pub fn new(path: PathBuf) -> Load {
         Load {
             path,
-            preview: false
+            preview: true
         }
     }
 }
@@ -41,7 +41,7 @@ impl Operation for Load {
             .map(|path| {
                 let mut result = image::open(path).unwrap();
                 if self.preview {
-                    result = result.resize(256, 256, FilterType::Gaussian);
+                    result = result.resize(1024, 1024, FilterType::Gaussian);
                 }
                 println!("Finished loading image \"{}\"", path.display());
                 result
