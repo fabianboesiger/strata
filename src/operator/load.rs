@@ -23,7 +23,7 @@ impl Load {
     pub fn new(path: PathBuf) -> Load {
         Load {
             path,
-            preview: true
+            preview: false
         }
     }
 }

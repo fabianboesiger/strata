@@ -14,13 +14,8 @@ use image::{
     Rgb
 };
 use std::{
-    path::PathBuf,
-    cmp::{
-        min, 
-        max
-    }
+    path::PathBuf
 };
-use rayon::prelude::*;
 use nalgebra::{
     Vector2,
     Vector3
@@ -28,74 +23,6 @@ use nalgebra::{
 use crate::error;
 
 pub type Vector = Vector2<i32>;
-pub type ColorVector = Vector3<u8>;
-
-// Calculates the difference between two images.
-fn image_difference(i1: &RgbImage, i2: &RgbImage, i2_rel_to_i1: &Vector, density: u32) -> f32 {
-    let p1 = (max(0, i2_rel_to_i1.x), max(0, i2_rel_to_i1.y));
-    let p2 = (max(0, -i2_rel_to_i1.x), max(0, -i2_rel_to_i1.y));
-    let size = (
-        min(i1.width() as i32 - i2_rel_to_i1.x, i2.width() as i32 + i2_rel_to_i1.x),
-        min(i1.height() as i32 - i2_rel_to_i1.y, i2.height() as i32 + i2_rel_to_i1.y)
-    );
-    let result = (0..size.0)
-        .into_par_iter()
-        .filter(|i| i % density as i32 == 0)
-        .map(|x| 
-            (0..size.1)
-                .into_par_iter()
-                .filter(|i| i % density as i32 == 0)
-                .map(move |y| (x, y))
-        )
-        .flatten()
-        .map(|(x, y)| {
-            let a = i1.get_pixel((x + p1.0) as u32, (y + p1.1) as u32);
-            let b = i2.get_pixel((x + p2.0) as u32, (y + p2.1) as u32);
-            let error = (
-                ((a[0] as f32 - b[0] as f32) / 256.0).powi(2) + 
-                ((a[1] as f32 - b[1] as f32) / 256.0).powi(2) + 
-                ((a[2] as f32 - b[2] as f32) / 256.0).powi(2)
-            ).sqrt();
-            (error, 1)
-        })
-        .reduce(|| (0.0, 1), |acc, e| ((acc.0 + e.0), (acc.1 + e.1)));
-
-    let result = result.0 / result.1 as f32;
-
-    result
-}
-
-fn layer_difference(l1: &Layer, l2: &Layer) -> Vector3::<f32> {
-    let i2_rel_to_i1 = l2.position - l1.position;
-    let p1 = (max(0, i2_rel_to_i1.x), max(0, i2_rel_to_i1.y));
-    let p2 = (max(0, -i2_rel_to_i1.x), max(0, -i2_rel_to_i1.y));
-    let size = (
-        min(i1.width() as i32 - i2_rel_to_i1.x, i2.width() as i32 + i2_rel_to_i1.x),
-        min(i1.height() as i32 - i2_rel_to_i1.y, i2.height() as i32 + i2_rel_to_i1.y)
-    );
-    let result = (0..size.0)
-        .into_par_iter()
-        .map(|x| 
-            (0..size.1)
-                .into_par_iter()
-                .map(move |y| (x, y))
-        )
-        .flatten()
-        .map(|(x, y)| {
-            let a = i1.get_pixel((x + p1.0) as u32, (y + p1.1) as u32);
-            let b = i2.get_pixel((x + p2.0) as u32, (y + p2.1) as u32);
-            Vector3::new(
-                a[0] as f32 - b[0] as f32, 
-                a[1] as f32 - b[1] as f32, 
-                a[2] as f32 - b[2] as f32
-            )
-        })
-        .reduce(|| Vector3::zeros(), |a, b| a + b);
-
-    let result = result.0 / result.1 as f32;
-
-    result
-}
 
 #[derive(Clone)]
 pub struct Layer {
@@ -110,7 +37,7 @@ impl Layer {
             position: Vector::zeros()
         }
     }
-
+    
     fn get_pixel(&self, position: &Vector) -> Option<&Rgb<u8>> {
         let absolute_position = position - self.position;
 

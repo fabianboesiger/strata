@@ -58,33 +58,38 @@ impl Operation for Join {
             )
             .flatten()
             .map(|position| {
-                let pixels = view.layers
+                let colors = view.layers
                     .par_iter()
-                    .map(|layer| {
+                    .enumerate()
+                    .map(|(i, layer)| {
                         layer.get_pixel(&position)
                             .map(|pixel| {
                                 let center = layer.position + Vector::new(layer.image.width() as i32, layer.image.height() as i32) / 2;
                                 let distance = position - center;
-                                ((pixel[0] as f32, pixel[1] as f32, pixel[2] as f32), 10000.0 - ((distance.x.pow(2) + distance.y.pow(2)) as f32))
-                                //[pixel[0] as u32, pixel[1] as u32, pixel[2] as u32]
+                                (
+                                    /*
+                                    match i {
+                                        0 => (255.0, 0.0, 0.0),
+                                        1 => (255.0, 255.0, 0.0),
+                                        2 => (0.0, 255.0, 0.0),
+                                        3 => (0.0, 255.0, 255.0),
+                                        _ => unreachable!()
+                                    },
+                                    */
+                                    (pixel[0] as f64, pixel[1] as f64, pixel[2] as f64),
+                                    (1.0 / ((distance.x.pow(2) + distance.y.pow(2)) as f64).sqrt()).powf(8.0)
+                                )
                             })
                     })
                     .filter_map(|x| x)
-                    .collect::<Vec<((f32, f32, f32), f32)>>();
-                    /*
-                    .reduce(|| ([0, 0, 0]), |p1, p2| {
-                        [max(p1[0], p2[0]), max(p1[1], p2[1]), max(p1[2], p2[2])]
-                    });
-                    */
-
-                //println!("{:?}", result);
+                    .collect::<Vec<((f64, f64, f64), f64)>>();
                 
-                let sum = pixels
+                let sum = colors
                     .par_iter()
                     .map(|(_, d)| d)
-                    .sum::<f32>();
+                    .sum::<f64>();
                 
-                let result = pixels
+                let result = colors
                     .into_iter()
                     .fold((0.0, 0.0, 0.0), |acc, (c, d)| {
                         (acc.0 + c.0 * d, acc.1 + c.1 * d, acc.2 + c.2 * d)
@@ -97,9 +102,9 @@ impl Operation for Join {
                 )
             })
             .collect::<Vec<(u32, u32, (u8, u8, u8))>>();
-
-        let mut image = RgbImage::new(size.0 as u32, size.1 as u32);
         
+        // Put pixels into a new image.
+        let mut image = RgbImage::new(size.0 as u32, size.1 as u32);
         for pixel in pixels {
             let color = pixel.2;
             image.put_pixel(pixel.0, pixel.1, Rgb::from([color.0, color.1, color.2]));
