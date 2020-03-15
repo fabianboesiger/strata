@@ -2,11 +2,13 @@ mod load;
 mod position;
 mod join;
 mod save;
+mod colors;
 
 pub use load::Load;
 pub use position::Position;
 pub use join::Join;
 pub use save::Save;
+pub use colors::Colors;
 use image::{
     RgbImage,
     Rgb
@@ -19,10 +21,14 @@ use std::{
     }
 };
 use rayon::prelude::*;
-use nalgebra::Vector2;
+use nalgebra::{
+    Vector2,
+    Vector3
+};
 use crate::error;
 
 pub type Vector = Vector2<i32>;
+pub type ColorVector = Vector3<u8>;
 
 // Calculates the difference between two images.
 fn image_difference(i1: &RgbImage, i2: &RgbImage, i2_rel_to_i1: &Vector, density: u32) -> f32 {
@@ -53,6 +59,38 @@ fn image_difference(i1: &RgbImage, i2: &RgbImage, i2_rel_to_i1: &Vector, density
             (error, 1)
         })
         .reduce(|| (0.0, 1), |acc, e| ((acc.0 + e.0), (acc.1 + e.1)));
+
+    let result = result.0 / result.1 as f32;
+
+    result
+}
+
+fn layer_difference(l1: &Layer, l2: &Layer) -> Vector3::<f32> {
+    let i2_rel_to_i1 = l2.position - l1.position;
+    let p1 = (max(0, i2_rel_to_i1.x), max(0, i2_rel_to_i1.y));
+    let p2 = (max(0, -i2_rel_to_i1.x), max(0, -i2_rel_to_i1.y));
+    let size = (
+        min(i1.width() as i32 - i2_rel_to_i1.x, i2.width() as i32 + i2_rel_to_i1.x),
+        min(i1.height() as i32 - i2_rel_to_i1.y, i2.height() as i32 + i2_rel_to_i1.y)
+    );
+    let result = (0..size.0)
+        .into_par_iter()
+        .map(|x| 
+            (0..size.1)
+                .into_par_iter()
+                .map(move |y| (x, y))
+        )
+        .flatten()
+        .map(|(x, y)| {
+            let a = i1.get_pixel((x + p1.0) as u32, (y + p1.1) as u32);
+            let b = i2.get_pixel((x + p2.0) as u32, (y + p2.1) as u32);
+            Vector3::new(
+                a[0] as f32 - b[0] as f32, 
+                a[1] as f32 - b[1] as f32, 
+                a[2] as f32 - b[2] as f32
+            )
+        })
+        .reduce(|| Vector3::zeros(), |a, b| a + b);
 
     let result = result.0 / result.1 as f32;
 
@@ -124,6 +162,7 @@ pub async fn run(input: PathBuf, output: PathBuf) -> error::Result<()> {
     let mut operator = Operator::default();
     operator.add(Load::new(input));
     operator.add(Position::new());
+    operator.add(Colors::new());
     operator.add(Join::new());
     operator.add(Save::new(output));
     operator.run()?;
