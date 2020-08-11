@@ -2,7 +2,11 @@
 
 Strata is an image stacking application intended for astrophotography.
 
+![preview](preview.png)
+
 ## Download
+
+[Download the latest version here.](https://github.com/fabianboesiger/strata/releases/tag/0.1.0)
 
 ## Compilation
 
