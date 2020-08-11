@@ -1,3 +1,5 @@
+mod theme;
+
 use iced::{
     Application,
     Command,
@@ -9,18 +11,20 @@ use iced::{
     button::Button,
     text_input,
     text_input::TextInput,
-    Background,
     Color,
     Scrollable,
-    scrollable
+    scrollable,
+    executor,
 };
 use std::{
     path::PathBuf,
     env,
-    process::exit
+    process::exit,
 };
-use crate::operator::run;
-use crate::error;
+use crate::operator::{
+    run,
+    error,
+};
 
 #[derive(Clone, Debug)]
 pub enum Message {
@@ -29,7 +33,8 @@ pub enum Message {
     Run,
     Finish(error::Result<()>),
     Restart,
-    Exit
+    Exit,
+    Open
 }
 
 enum State {
@@ -103,6 +108,7 @@ pub struct App {
     state: State,
     run_button: button::State,
     restart_button: button::State,
+    open_button: button::State,
     exit_button: button::State,
     load_path_text_input: text_input::State,
     load_path: PathBuf,
@@ -112,9 +118,11 @@ pub struct App {
 }
 
 impl Application for App {
+    type Executor = executor::Default;
     type Message = Message;
+    type Flags = ();
 
-    fn new() -> (App, Command<Message>) {
+    fn new(_flags: ()) -> (App, Command<Message>) {
         let working_dir = env::current_dir().unwrap();
         let mut load_path = working_dir.clone();
         load_path.push("images");
@@ -172,6 +180,11 @@ impl Application for App {
             },
             Message::Finish(result) => {
                 self.state = State::Finished(result);
+
+                Command::none()
+            },
+            Message::Open => {
+                // TODO: Implement open functionality.
 
                 Command::none()
             },
@@ -270,22 +283,25 @@ impl Application for App {
                                     {
                                         Button::new(&mut self.run_button, Text::new("Run"))
                                             .on_press(Message::Run)
-                                            .padding(8)
+                                            .style(theme::Button)
+                                            /*.padding(8)
                                             .border_radius(4)
-                                            .background(Background::Color(Color::from([0.3, 0.7, 0.3])))
+                                            .background(Background::Color(Color::from([0.3, 0.7, 0.3])))*/
                                     } else {
                                         Button::new(&mut self.run_button, Text::new("Run"))
-                                            .padding(8)
+                                            .style(theme::Button)
+                                            /*.padding(8)
                                             .border_radius(4)
-                                            .background(Background::Color(Color::from([0.7, 0.3, 0.3])))
+                                            .background(Background::Color(Color::from([0.7, 0.3, 0.3])))*/
                                     }
                                 )
                                 .push(
                                     Button::new(&mut self.exit_button, Text::new("Exit"))
                                         .on_press(Message::Exit)
-                                        .padding(8)
+                                        .style(theme::Button)
+                                        /*.padding(8)
                                         .border_radius(4)
-                                        .background(Background::Color(Color::from([0.7, 0.7, 0.7])))
+                                        .background(Background::Color(Color::from([0.7, 0.7, 0.7])))*/
                                 )
                         )
                 },
@@ -320,19 +336,20 @@ impl Application for App {
                         .push(
                             Row::new()
                                 .spacing(8)
+                                /*.push(
+                                    Button::new(&mut self.open_button, Text::new("Open Image in Default Application"))
+                                        .on_press(Message::Open)
+                                        .style(theme::Button)
+                                )*/
                                 .push(
                                     Button::new(&mut self.restart_button, Text::new("Restart"))
                                         .on_press(Message::Restart)
-                                        .padding(8)
-                                        .border_radius(4)
-                                        .background(Background::Color(Color::from([0.7, 0.7, 0.7])))
+                                        .style(theme::Button)
                                 )
                                 .push(
                                     Button::new(&mut self.exit_button, Text::new("Exit"))
                                         .on_press(Message::Exit)
-                                        .padding(8)
-                                        .border_radius(4)
-                                        .background(Background::Color(Color::from([0.7, 0.7, 0.7])))
+                                        .style(theme::Button)
                                 )
                         )
                 },
@@ -356,16 +373,12 @@ impl Application for App {
                                 .push(
                                     Button::new(&mut self.restart_button, Text::new("Restart"))
                                         .on_press(Message::Restart)
-                                        .padding(8)
-                                        .border_radius(4)
-                                        .background(Background::Color(Color::from([0.7, 0.7, 0.7])))
+                                        .style(theme::Button)
                                 )
                                 .push(
                                     Button::new(&mut self.exit_button, Text::new("Exit"))
                                         .on_press(Message::Exit)
-                                        .padding(8)
-                                        .border_radius(4)
-                                        .background(Background::Color(Color::from([0.7, 0.7, 0.7])))
+                                        .style(theme::Button)
                                 )
                         )
                 }

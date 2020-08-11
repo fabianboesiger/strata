@@ -1,7 +1,8 @@
 use super::{
     Operation,
     View,
-    Layer
+    Layer,
+    error,
 };
 use std::{
     fs,
@@ -12,7 +13,6 @@ use image::{
     imageops::FilterType
 };
 use rayon::prelude::*;
-use crate::error;
 
 pub struct Load {
     path: PathBuf,
@@ -41,7 +41,7 @@ impl Operation for Load {
             .map(|path| {
                 let mut result = image::open(path).unwrap();
                 if self.preview {
-                    result = result.resize(1024, 1024, FilterType::Gaussian);
+                    result = result.resize(512, 512, FilterType::Gaussian);
                 }
                 println!("Finished loading image \"{}\"", path.display());
                 result

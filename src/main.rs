@@ -1,25 +1,24 @@
-mod gui;
-mod cli;
+#![windows_subsystem = "windows"]
+
+mod app;
 mod operator;
-mod error;
 
 use iced::{
     Settings,
-    settings::Window,
-    Application
+    window,
+    Application,
 };
 
 fn main() {
-    if cfg!(feature = "gui") {
-        println!("Running as GUI application.");
-        gui::App::run(Settings {
-            window: Window {
-                size: (640, 480),
-                resizable: false
-            }
-        });
-    } else {
-        println!("Running as CLI application.");
-        cli::run();
-    }
+    println!("Starting application.");
+    app::App::run(Settings {
+        window: window::Settings {
+            size: (640, 480),
+            resizable: false,
+            ..
+            Default::default()
+        },
+        ..
+        Default::default()
+    });
 }

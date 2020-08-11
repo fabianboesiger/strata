@@ -2,16 +2,16 @@ use super::{
     Operation,
     View,
     Vector,
+    error,
 };
 use std::{
     iter::FromIterator,
     cmp::{
         min,
-        max
+        max,
     }
 };
 use rayon::prelude::*;
-use crate::error;
 
 pub struct Colors {
 }
@@ -31,4 +31,4 @@ impl Operation for Colors {
 
         Ok(view)
     }
-}
+}   

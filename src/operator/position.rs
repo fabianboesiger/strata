@@ -1,7 +1,8 @@
 use super::{
     Operation,
     View,
-    Vector
+    Vector,
+    error
 };
 use std::{
     iter::FromIterator,
@@ -15,8 +16,6 @@ use image::{
 };
 use rayon::prelude::*;
 use partitions::PartitionVec;
-use crate::error;
-
 
 // Calculates the difference between two images.
 fn image_difference(i1: &RgbImage, i2: &RgbImage, i2_rel_to_i1: &Vector, density: u32) -> f32 {

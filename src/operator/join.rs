@@ -2,12 +2,13 @@ use super::{
     Operation,
     View,
     Layer,
-    Vector
+    Vector,
+    error,
 };
 use std::{
     cmp::{
         min,
-        max
+        max,
     }
 };
 use image::{
@@ -15,7 +16,6 @@ use image::{
     Rgb
 };
 use rayon::prelude::*;
-use crate::error;
 
 pub struct Join {
 }
@@ -76,8 +76,10 @@ impl Operation for Join {
                                         _ => unreachable!()
                                     },
                                     */
+                                    //((i % 2) as f64 * 255.0, (i % 4) as f64 * 255.0 / 3.0, (i % 8) as f64 * 255.0 / 7.0)
+
                                     (pixel[0] as f64, pixel[1] as f64, pixel[2] as f64),
-                                    (1.0 / ((distance.x.pow(2) + distance.y.pow(2)) as f64).sqrt()).powf(8.0)
+                                    (1.0 / ((distance.x.pow(2) + distance.y.pow(2)) as f64).sqrt()).powf(4.0)
                                 )
                             })
                     })

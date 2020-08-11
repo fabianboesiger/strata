@@ -1,40 +1,48 @@
 mod load;
 mod position;
+//mod sharpness;
 mod join;
 mod save;
 mod colors;
 
-pub use load::Load;
-pub use position::Position;
-pub use join::Join;
-pub use save::Save;
-pub use colors::Colors;
+pub mod error;
+
+use load::Load;
+use position::Position;
+//use sharpness::Sharpness;
+use join::Join;
+use save::Save;
+use colors::Colors;
+
 use image::{
     RgbImage,
     Rgb
 };
-use std::{
-    path::PathBuf
-};
-use nalgebra::{
-    Vector2,
-    Vector3
-};
-use crate::error;
+
+use std::path::PathBuf;
+use nalgebra::Vector2;
 
 pub type Vector = Vector2<i32>;
 
 #[derive(Clone)]
 pub struct Layer {
     pub position: Vector,
-    pub image: RgbImage
+    pub image: RgbImage,
+    //pub sharpness: Vec<f32>
 }
 
 impl Layer {
     fn new(image: RgbImage) -> Layer {
         Layer {
             image,
-            position: Vector::zeros()
+            position: Vector::zeros(),
+            /*sharpness: {
+                let mut vec = Vec::new();
+                for _ in image.pixels() {
+                    vec.push(1.0);
+                }
+                vec
+            }*/
         }
     }
     
@@ -90,6 +98,7 @@ pub async fn run(input: PathBuf, output: PathBuf) -> error::Result<()> {
     operator.add(Load::new(input));
     operator.add(Position::new());
     operator.add(Colors::new());
+    //operator.add(Sharpness::new());
     operator.add(Join::new());
     operator.add(Save::new(output));
     operator.run()?;
