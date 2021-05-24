@@ -1,6 +1,6 @@
 # Strata
 
-Strata is an image stacking application intended for astrophotography.
+Strata is an image merging application intended for astrophotography.
 
 ![preview](preview.png)
 
@@ -24,5 +24,7 @@ On Linux, you may have to install some packages in order to get [iced](https://g
    2. The images and relative positions to each other now form a complete graph.
    3. Strata computes the minimum spanning tree using Kruskal's algorithm which uniquely determines the position of each image.
 3. **Adjusting the brightness.**
-4. **Joining the images.**
-5. **Saving the resulting image.**
+   1. Strata automatically adjusts the brightness.
+5. **Joining the images.**
+   1. Strata joins the image into a single image.
+7. **Saving the resulting image.**
